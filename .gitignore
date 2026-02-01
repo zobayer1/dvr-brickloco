@@ -37,7 +37,8 @@ _ReSharper*/
 *.[Rr]e[Ss]harper
 
 # VS Code
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 
 # OS junk
 Thumbs.db

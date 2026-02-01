@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build (Debug)",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "-c",
+        "Debug"
+      ],
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Deploy Mod (Derail Valley)",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "msbuild",
+        "-t:DeployToDerailValley",
+        "-p:Configuration=Debug",
+        "-p:DeployToDerailValley=true"
+      ],
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}
