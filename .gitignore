@@ -1,0 +1,75 @@
+################################################################################
+# BrickLoco (Derail Valley Unity mod) - C# project .gitignore
+# Keeps source + project files, ignores build output + IDE caches.
+################################################################################
+
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# User-specific / IDE files
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Visual Studio / MSBuild
+*.pdb
+*.mdb
+*.cache
+*.log
+*.tlog
+*.ilk
+*.obj
+*.idb
+*.ipch
+*.aps
+*.ncb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# VS Code
+.vscode/
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Test results
+TestResults/
+*.trx
+
+# NuGet
+packages/
+**/packages/*
+*.nupkg
+
+# Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# Unity (if you also have a Unity project folder in this repo)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+
+# Unity meta
+# (Keep .meta files by default for Unity projects; do not ignore *.meta here)
+
+# JetBrains dotSettings in repo root (optional)
+# *.DotSettings.user
