@@ -20,6 +20,10 @@
       <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\DV.ThingTypes.dll</HintPath>
     </Reference>
 
+    <Reference Include="DV.Utils">
+      <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\DV.Utils.dll</HintPath>
+    </Reference>
+
     <Reference Include="UnityEngine">
       <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>

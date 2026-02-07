@@ -44,13 +44,15 @@ namespace BrickLoco
                 yield return null;
             }
 
-            LogAllTrainCarLiveries();
-
             Camera cam = (Camera.main ?? player.GetComponentInChildren<Camera>(true)) ?? FindObjectOfType<Camera>();
             if (cam == null)
             {
                 Logger.LogWarning("Player found, but no Camera found; spawning may be off-screen.");
             }
+
+            LogAllTrainCarLiveries();
+            TestCarSpawnerVisibility();
+            SpawnFlatbedShort(player.transform.position);
 
             Vector3 forward = cam != null ? cam.transform.forward : player.transform.forward;
             Vector3 origin = cam != null ? cam.transform.position : player.transform.position;
@@ -130,6 +132,59 @@ namespace BrickLoco
             {
                 string prefabName = livery.prefab != null ? livery.prefab.name : "NULL";
                 Logger.LogInfo($"Livery id={livery.id}, prefab={prefabName}, hidden={livery.isHidden}");
+            }
+        }
+
+        private void TestCarSpawnerVisibility()
+        {
+            var spawner = FindObjectOfType<CarSpawner>();
+            Logger.LogInfo($"CarSpawner found: {spawner != null}");
+        }
+
+        private TrainCarLivery FindLiveryById(string id)
+        {
+            var liveries = Resources.FindObjectsOfTypeAll<TrainCarLivery>();
+
+            foreach (var livery in liveries)
+            {
+                if (livery.id == id)
+                    return livery;
+            }
+
+            return null;
+        }
+
+        private void SpawnFlatbedShort(Vector3 position)
+        {
+            var spawner = FindObjectOfType<CarSpawner>();
+            if (spawner == null)
+            {
+                Logger.LogError("CarSpawner not found!");
+                return;
+            }
+
+            var livery = FindLiveryById("FlatbedShort");
+            if (livery == null)
+            {
+                Logger.LogError("FlatbedShort livery not found!");
+                return;
+            }
+
+            TrainCar car = spawner.SpawnCarOnClosestTrack(
+                position,
+                livery,
+                flipRotation: false,
+                playerSpawnedCar: true,
+                uniqueCar: true
+            );
+
+            if (car != null)
+            {
+                Logger.LogInfo($"Spawned TrainCar: {car.name}");
+            }
+            else
+            {
+                Logger.LogError("SpawnCarOnClosestTrack returned null");
             }
         }
     }
