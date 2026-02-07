@@ -16,6 +16,10 @@
       <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
 
+    <Reference Include="DV.ThingTypes">
+      <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\DV.ThingTypes.dll</HintPath>
+    </Reference>
+
     <Reference Include="UnityEngine">
       <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>

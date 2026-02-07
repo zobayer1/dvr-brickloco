@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using DV.ThingTypes;
 using UnityEngine;
 
 namespace BrickLoco
@@ -42,6 +43,8 @@ namespace BrickLoco
                 player = GameObject.FindWithTag("Player");
                 yield return null;
             }
+
+            LogAllTrainCarLiveries();
 
             Camera cam = (Camera.main ?? player.GetComponentInChildren<Camera>(true)) ?? FindObjectOfType<Camera>();
             if (cam == null)
@@ -114,6 +117,19 @@ namespace BrickLoco
             if (cubeRenderer != null)
             {
                 Logger.LogInfo($"Cube renderer enabled: {cubeRenderer.enabled}, isVisible (any camera): {cubeRenderer.isVisible}");
+            }
+        }
+
+        private void LogAllTrainCarLiveries()
+        {
+            var liveries = Resources.FindObjectsOfTypeAll<TrainCarLivery>();
+
+            Logger.LogInfo($"Found {liveries.Length} TrainCarLivery assets");
+
+            foreach (var livery in liveries)
+            {
+                string prefabName = livery.prefab != null ? livery.prefab.name : "NULL";
+                Logger.LogInfo($"Livery id={livery.id}, prefab={prefabName}, hidden={livery.isHidden}");
             }
         }
     }
