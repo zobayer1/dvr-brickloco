@@ -38,6 +38,20 @@
 
   </ItemGroup>
 
+  <Target Name="CleanDeployedFromDerailValley"
+          Condition="'$(Configuration)' == 'Debug' and '$(TargetFramework)' == 'net472'">
+    <Error Condition="'$(DerailValleyPluginsDir)' == ''"
+           Text="DerailValleyPluginsDir is empty. Set it in the .csproj before running CleanDeployedFromDerailValley." />
+
+    <PropertyGroup>
+      <_DeployedPluginDll>$(DerailValleyPluginsDir)\$(AssemblyName).dll</_DeployedPluginDll>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="Deleting deployed mod DLL: $(_DeployedPluginDll)" />
+    <Delete Files="$(_DeployedPluginDll)" Condition="Exists('$(_DeployedPluginDll)')" />
+    <Message Importance="high" Condition="!Exists('$(_DeployedPluginDll)')" Text="No deployed DLL found to delete." />
+  </Target>
+
     <Target Name="DeployToDerailValley" DependsOnTargets="Build"
       Condition="'$(DeployToDerailValley)' == 'true' and '$(Configuration)' == 'Debug' and '$(TargetFramework)' == 'net472'">
     <Message Importance="high" Text="Deploying $(TargetFileName) to $(DerailValleyPluginsDir)" />

@@ -25,6 +25,18 @@
       ],
       "group": "build",
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Clean Deployed Mod (Derail Valley)",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "msbuild",
+        "-t:CleanDeployedFromDerailValley",
+        "-p:Configuration=Debug"
+      ],
+      "group": "build",
+      "problemMatcher": "$msCompile"
     }
   ]
 }

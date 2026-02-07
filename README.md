@@ -14,8 +14,8 @@ into the game before any vehicle or gameplay logic is added.
 - [x] Plugin loads and logs from `Awake()`
 - [x] Explicit deploy workflow (manual MSBuild target + VS Code task)
 - [x] Visible test cube spawns in-world (renderer visible)
-- [ ] Reference DV gameplay assemblies (e.g., `Assembly-CSharp.dll`) for deeper integration
-- [ ] Hook into gameplay events / world systems
+- [x] Reference DV gameplay assemblies (e.g., `Assembly-CSharp.dll`) for deeper integration
+- [x] Hook into gameplay events / world systems
 
 ---
 
@@ -207,6 +207,8 @@ This confirms:
 
 This repo includes an **explicit** deploy target (it does not run on normal builds).
 
+The deploy/clean targets use the `DerailValleyPluginsDir` property in `BrickLoco.csproj` to know where your Derail Valley `BepInEx/plugins` folder is.
+
 - Normal build (no deploy):
 
 ```bash
@@ -219,7 +221,15 @@ dotnet build -c Debug
 dotnet msbuild -t:DeployToDerailValley -p:Configuration=Debug -p:DeployToDerailValley=true
 ```
 
-VS Code also has a task: **Deploy Mod (Derail Valley)**.
+### VS Code tasks
+
+- **Build (Debug)**
+  - `dotnet build -c Debug`
+- **Deploy Mod (Derail Valley)**
+  - `dotnet msbuild -t:DeployToDerailValley -p:Configuration=Debug -p:DeployToDerailValley=true`
+- **Clean Deployed Mod (Derail Valley)** (un-deploy)
+  - Deletes the deployed DLL from your game install so the mod stops loading.
+  - `dotnet msbuild -t:CleanDeployedFromDerailValley -p:Configuration=Debug`
 
 ---
 
@@ -245,6 +255,21 @@ Expected log lines:
 If you see `isVisible: False`, the object exists but isn’t being rendered (layer/culling-mask issue).
 
 ---
+
+## 8.1. New Progress (Vehicle Work)
+
+As of Feb 2026, the project has moved beyond the initial "spawn a dummy cube" milestone and into spawning and modifying real rolling stock.
+
+Current milestones reached:
+
+- Inspect `TrainCarLivery` prefab assets ("CarLiveries") in-game via `Resources.FindObjectsOfTypeAll<TrainCarLivery>()`.
+- Spawn a `FlatbedShort` (Short Flat Car) on the closest track using `CarSpawner.SpawnCarOnClosestTrack(...)`.
+- Replace the carbody visuals by disabling existing renderers and parenting a custom cube as a temporary stand-in mesh.
+- Verify basic interactions still work: coupling and handbrake operation.
+
+Known missing piece:
+
+- Wheels / proper bogies are not implemented yet (visual + physics).
 
 ## 9. Known Constraints
 

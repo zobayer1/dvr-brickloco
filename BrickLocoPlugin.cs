@@ -54,72 +54,7 @@ namespace BrickLoco
             TestCarSpawnerVisibility();
             SpawnFlatbedShort(player.transform.position);
 
-            Vector3 forward = cam != null ? cam.transform.forward : player.transform.forward;
-            Vector3 origin = cam != null ? cam.transform.position : player.transform.position;
-            Vector3 spawnPosition = origin + forward * 6f;
-
-            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            
-            cube.name = "BrickLoco_TestCube";
-            cube.transform.position = spawnPosition;
-            cube.transform.localScale = Vector3.one;
-            DontDestroyOnLoad(cube);
-
-            cube.layer = GetVisibleLayerForCamera(cam);
-
-            Renderer cubeRenderer = cube.GetComponent<Renderer>();
-            if (cubeRenderer != null)
-            {
-                Shader shader = Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
-                if (shader != null)
-                {
-                    Material mat = new Material(shader)
-                    {
-                        color = Color.red
-                    };
-
-                    if (mat.HasProperty("_EmissionColor"))
-                    {
-                        mat.EnableKeyword("_EMISSION");
-                        mat.SetColor("_EmissionColor", Color.red * 2f);
-                    }
-                    cubeRenderer.material = mat;
-                }
-                else
-                {
-                    Logger.LogWarning("Could not find a suitable shader for the test cube material.");
-                }
-            }
-
-            Rigidbody rb = cube.AddComponent<Rigidbody>();
-            rb.mass = 50f;
-            rb.useGravity = false;
-            rb.isKinematic = true;
-
-            Debug.DrawLine(
-                player.transform.position,
-                spawnPosition,
-                Color.green,
-                10f
-            );
-
-            Logger.LogInfo($"Cube activeSelf: {cube.activeSelf}, activeInHierarchy: {cube.activeInHierarchy}");
-            Logger.LogInfo($"Cube layer: {cube.layer}");
-            if (cam != null)
-            {
-                Logger.LogInfo($"Camera: {cam.name}, cullingMask: 0x{cam.cullingMask:X8}");
-            }
-
-            Logger.LogInfo($"Spawned test cube near player at {spawnPosition}");
-
-            float distance = Vector3.Distance(player.transform.position, spawnPosition);
-            Logger.LogInfo($"Distance from player: {distance}");
-
-            yield return new WaitForSeconds(0.5f);
-            if (cubeRenderer != null)
-            {
-                Logger.LogInfo($"Cube renderer enabled: {cubeRenderer.enabled}, isVisible (any camera): {cubeRenderer.isVisible}");
-            }
+            yield break;
         }
 
         private void LogAllTrainCarLiveries()
@@ -181,11 +116,49 @@ namespace BrickLoco
             if (car != null)
             {
                 Logger.LogInfo($"Spawned TrainCar: {car.name}");
+                ReplaceVisualsWithCube(car);
             }
             else
             {
                 Logger.LogError("SpawnCarOnClosestTrack returned null");
             }
+        }
+
+        private void ReplaceVisualsWithCube(TrainCar car)
+        {
+            // Disable all existing renderers
+            var renderers = car.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                r.enabled = false;
+            }
+
+            // Create a cube as the new visual
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = "BrickLoco_Visual";
+
+            // Parent to the TrainCar
+            cube.transform.SetParent(car.transform, false);
+
+            // Position & scale (temporary values)
+            cube.transform.localPosition = Vector3.up * 1.2f;
+            cube.transform.localScale = new Vector3(2f, 1f, 1f);
+
+            // Layer fix (same trick as before)
+            Camera cam = Camera.main;
+            cube.layer = GetVisibleLayerForCamera(cam);
+
+            // Material (reuse what already works)
+            var renderer = cube.GetComponent<Renderer>();
+            renderer.material = new Material(renderer.material)
+            {
+                color = Color.red
+            };
+
+            // Remove physics from visual
+            Destroy(cube.GetComponent<Collider>());
+
+            Logger.LogInfo("Replaced TrainCar visuals with brick cube");
         }
     }
 }
