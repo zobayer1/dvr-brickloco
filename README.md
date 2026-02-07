@@ -16,6 +16,7 @@ into the game before any vehicle or gameplay logic is added.
 - [x] Visible test cube spawns in-world (renderer visible)
 - [x] Reference DV gameplay assemblies (e.g., `Assembly-CSharp.dll`) for deeper integration
 - [x] Hook into gameplay events / world systems
+- [ ] Make the cube a stable body
 
 ---
 
@@ -149,7 +150,7 @@ dotnet build
 
 Delete `Class1.cs`.
 
-Create `BrickLocoPlugin.cs`:
+Create `src/BrickLocoPlugin.cs`:
 
 ```csharp
 using BepInEx;

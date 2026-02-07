@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using DV.ThingTypes;
 using UnityEngine;
 
@@ -34,7 +34,7 @@ namespace BrickLoco
 
             return 0;
         }
-        
+
         private System.Collections.IEnumerator WaitForPlayerAndSpawn()
         {
             GameObject player = null;
