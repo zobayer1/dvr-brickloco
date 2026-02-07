@@ -113,15 +113,23 @@ namespace BrickLoco
                 uniqueCar: true
             );
 
-            if (car != null)
-            {
-                Logger.LogInfo($"Spawned TrainCar: {car.name}");
-                ReplaceVisualsWithCube(car);
-            }
-            else
+            if (car == null)
             {
                 Logger.LogError("SpawnCarOnClosestTrack returned null");
+                return;
             }
+
+            Logger.LogInfo($"Spawned TrainCar: {car.name}");
+            // 1. Fix physics FIRST
+            var rb = car.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.centerOfMass = new Vector3(0f, 0.5f, 0f);
+                rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            }
+
+            // 2. THEN replace visuals
+            ReplaceVisualsWithCube(car);
         }
 
         private void ReplaceVisualsWithCube(TrainCar car)
