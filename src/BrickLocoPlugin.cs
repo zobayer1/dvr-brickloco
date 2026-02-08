@@ -7,6 +7,10 @@ namespace BrickLoco
     [BepInPlugin("com.zobayer.brickloco", "Brick Loco", "0.0.1")]
     public class BrickLocoPlugin : BaseUnityPlugin
     {
+        private float maxSpeed = 20f;
+        private float forceAmount = 7000f;
+        private float carMass = 20000f;
+
         private TrainCar spawnedCar;
         
         private void Start()
@@ -128,6 +132,7 @@ namespace BrickLoco
             var rb = car.GetComponent<Rigidbody>();
             if (rb != null)
             {
+                rb.mass = carMass;
                 rb.centerOfMass = new Vector3(0f, 0.5f, 0f);
                 rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             }
@@ -177,9 +182,13 @@ namespace BrickLoco
             if (spawnedCar == null)
                 return;
 
-            if (Input.GetKey(KeyCode.G))
+            if (IsPlayerNearCar() && Input.GetKey(KeyCode.G))
             {
-                ApplyForwardForce(spawnedCar, 5000f);
+                ApplyForwardForce(spawnedCar, forceAmount);
+            }
+            if (IsPlayerNearCar() && Input.GetKey(KeyCode.H))
+            {
+                ApplyForwardForce(spawnedCar, -forceAmount);
             }
         }
 
@@ -189,11 +198,19 @@ namespace BrickLoco
             if (rb == null)
                 return;
 
-            Vector3 forward = car.transform.forward;
+            float forwardSpeed = Vector3.Dot(rb.velocity, car.transform.forward);
+            if (forwardSpeed > maxSpeed) return;
 
-            rb.AddForce(forward * force * Time.deltaTime, ForceMode.Force);
+            rb.AddForce(car.transform.forward * force, ForceMode.Force);
+        }
 
-            Logger.LogInfo($"Applied forward force to TrainCar: {force}");
+        private bool IsPlayerNearCar(float maxDistance = 2.5f)
+        {
+            var player = GameObject.FindWithTag("Player");
+            if (player == null || spawnedCar == null)
+                return false;
+
+            return Vector3.Distance(player.transform.position, spawnedCar.transform.position) < maxDistance;
         }
     }
 }
