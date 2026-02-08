@@ -16,6 +16,7 @@ into the game before any vehicle or gameplay logic is added.
 - [x] Visible test cube spawns in-world (renderer visible)
 - [x] Reference DV gameplay assemblies (e.g., `Assembly-CSharp.dll`) for deeper integration
 - [x] Hook into gameplay events / world systems
+- [x] Press-and-hold `G` applies forward force to spawned car (simple linear acceleration)
 - [ ] Make the cube a stable body
 
 ---
@@ -266,6 +267,7 @@ Current milestones reached:
 - Inspect `TrainCarLivery` prefab assets ("CarLiveries") in-game via `Resources.FindObjectsOfTypeAll<TrainCarLivery>()`.
 - Spawn a `FlatbedShort` (Short Flat Car) on the closest track using `CarSpawner.SpawnCarOnClosestTrack(...)`.
 - Replace the carbody visuals by disabling existing renderers and parenting a custom cube as a temporary stand-in mesh.
+- Press and hold `G` to apply forward force to the spawned car (simple linear acceleration).
 - Verify basic interactions still work: coupling and handbrake operation.
 
 Known missing piece:

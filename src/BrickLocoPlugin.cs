@@ -7,6 +7,8 @@ namespace BrickLoco
     [BepInPlugin("com.zobayer.brickloco", "Brick Loco", "0.0.1")]
     public class BrickLocoPlugin : BaseUnityPlugin
     {
+        private TrainCar spawnedCar;
+        
         private void Start()
         {
             StartCoroutine(WaitForPlayerAndSpawn());
@@ -120,7 +122,9 @@ namespace BrickLoco
             }
 
             Logger.LogInfo($"Spawned TrainCar: {car.name}");
-            // 1. Fix physics FIRST
+            
+            spawnedCar = car;
+
             var rb = car.GetComponent<Rigidbody>();
             if (rb != null)
             {
@@ -128,7 +132,6 @@ namespace BrickLoco
                 rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             }
 
-            // 2. THEN replace visuals
             ReplaceVisualsWithCube(car);
         }
 
@@ -167,6 +170,30 @@ namespace BrickLoco
             Destroy(cube.GetComponent<Collider>());
 
             Logger.LogInfo("Replaced TrainCar visuals with brick cube");
+        }
+
+        private void FixedUpdate()
+        {
+            if (spawnedCar == null)
+                return;
+
+            if (Input.GetKey(KeyCode.G))
+            {
+                ApplyForwardForce(spawnedCar, 5000f);
+            }
+        }
+
+        private void ApplyForwardForce(TrainCar car, float force)
+        {
+            var rb = car.GetComponent<Rigidbody>();
+            if (rb == null)
+                return;
+
+            Vector3 forward = car.transform.forward;
+
+            rb.AddForce(forward * force * Time.deltaTime, ForceMode.Force);
+
+            Logger.LogInfo($"Applied forward force to TrainCar: {force}");
         }
     }
 }

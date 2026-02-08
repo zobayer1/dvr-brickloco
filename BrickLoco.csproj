@@ -36,6 +36,10 @@
       <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
 
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>D:\Games\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+
   </ItemGroup>
 
   <Target Name="CleanDeployedFromDerailValley"
