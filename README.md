@@ -4,7 +4,8 @@ This document describes the **exact steps** required to set up a working
 C# mod project for **Derail Valley** using **BepInEx**, **Unity (reference-only)**, and **.NET**.
 
 The goal is a **clean, minimal, reproducible setup** that loads a plugin DLL
-into the game before any vehicle or gameplay logic is added.
+into the game and proves end-to-end integration by spawning a real `TrainCar`,
+replacing its visuals with a placeholder cube, and applying simple keyboard-controlled propulsion.
 
 ---
 
@@ -13,10 +14,10 @@ into the game before any vehicle or gameplay logic is added.
 - [x] BepInEx installed and running (LogOutput.log created)
 - [x] Plugin loads and logs from `Awake()`
 - [x] Explicit deploy workflow (manual MSBuild target + VS Code task)
-- [x] Visible test cube spawns in-world (renderer visible)
+- [x] Spawn a real `TrainCar` and replace visuals with a visible cube
 - [x] Reference DV gameplay assemblies (e.g., `Assembly-CSharp.dll`) for deeper integration
 - [x] Hook into gameplay events / world systems
-- [x] Hold `G` / `H` to apply forward / reverse force to spawned car (speed-limited, tunable force + mass, only when nearby)
+- [x] Hold `G` / `H` to apply forward / reverse propulsion to spawned car (speed-limited, tunable force, only when nearby)
 - [ ] Make the cube a stable body
 
 ---
@@ -26,7 +27,7 @@ into the game before any vehicle or gameplay logic is added.
 ### Software
 - Derail Valley (Windows)
 - Unity Hub
-- Unity **2019.4 LTS** (reference-only; match the game's major version)
+- Unity **2019.4 LTS** (reference-only; match the game's major version; DV currently reports Unity 2019.4.x in LogOutput.log)
 - VS Code
 - .NET Framework **4.7.2 Developer Pack**
 - .NET SDK **6 or 8** (for `dotnet` CLI only)
@@ -92,6 +93,10 @@ Edit `BrickLoco.csproj`:
     <LangVersion>7.3</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>false</ImplicitUsings>
+
+    <!-- Used by the optional deploy/clean MSBuild targets (see section 7) -->
+    <DeployToDerailValley>false</DeployToDerailValley>
+    <DerailValleyPluginsDir>C:\\Path\\To\\Derail Valley\\BepInEx\\plugins</DerailValleyPluginsDir>
   </PropertyGroup>
 </Project>
 ```
@@ -115,11 +120,32 @@ Build succeeded.
 
 Update `BrickLoco.csproj` to reference game assemblies:
 
+NOTE: The `HintPath` values must match your Derail Valley install path.
+In this repo they are set to the author's local Steam library path.
+
 ```xml
 <ItemGroup>
   <Reference Include="BepInEx">
     <HintPath>
       C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\BepInEx\core\BepInEx.dll
+    </HintPath>
+  </Reference>
+
+  <Reference Include="Assembly-CSharp">
+    <HintPath>
+      C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\Assembly-CSharp.dll
+    </HintPath>
+  </Reference>
+
+  <Reference Include="DV.ThingTypes">
+    <HintPath>
+      C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\DV.ThingTypes.dll
+    </HintPath>
+  </Reference>
+
+  <Reference Include="DV.Utils">
+    <HintPath>
+      C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\DerailValley_Data\Managed\DV.Utils.dll
     </HintPath>
   </Reference>
 
@@ -132,6 +158,18 @@ Update `BrickLoco.csproj` to reference game assemblies:
   <Reference Include="UnityEngine.CoreModule">
     <HintPath>
       C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\Derail Valley_Data\Managed\UnityEngine.CoreModule.dll
+    </HintPath>
+  </Reference>
+
+  <Reference Include="UnityEngine.PhysicsModule">
+    <HintPath>
+      C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\Derail Valley_Data\Managed\UnityEngine.PhysicsModule.dll
+    </HintPath>
+  </Reference>
+
+  <Reference Include="UnityEngine.InputLegacyModule">
+    <HintPath>
+      C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\Derail Valley_Data\Managed\UnityEngine.InputLegacyModule.dll
     </HintPath>
   </Reference>
 </ItemGroup>
@@ -205,6 +243,32 @@ This confirms:
 * The mod DLL is loading
 * The plugin code is executing in-game
 
+---
+
+## 7.1. Config (Tune Without Recompiling)
+
+This mod uses the BepInEx config system (`Config.Bind(...)`) to expose tuning values.
+
+How it works:
+
+- You do **not** need to ship a config file for BepInEx to work.
+- On first launch after the plugin loads, BepInEx will automatically create the config file with default values.
+
+Where the file is:
+
+- `Derail Valley/BepInEx/config/com.zobayer.brickloco.cfg`
+
+What you edit:
+
+- `MaxSpeed` (default `20`)
+- `Force` (default `7000`)
+- `Mass` (default `20000`)
+
+Shipping defaults vs shipping a preset:
+
+- **Defaults** are shipped in code (the values passed to `Config.Bind`).
+- If you want to ship a *starter preset* (optional), you can include a sample file like `com.zobayer.brickloco.cfg.example` in your repo/release ZIP and tell users to copy it into `BepInEx/config/`.
+
 ### Optional: explicit deploy command + VS Code task
 
 This repo includes an **explicit** deploy target (it does not run on normal builds).
@@ -235,26 +299,26 @@ dotnet msbuild -t:DeployToDerailValley -p:Configuration=Debug -p:DeployToDerailV
 
 ---
 
-## 8. Spawn a Test Cube (Visible)
+## 8. Spawn a TrainCar + Replace Visuals (Visible)
 
-Once the plugin loads, the next milestone is to spawn a clearly visible object in the world.
+Once the plugin loads, the next milestone is to spawn a real piece of rolling stock and make a clearly visible placeholder visual.
 
 Implementation notes (current approach):
 
 - Wait for a `GameObject` tagged `Player`.
-- Find the player's camera (`Camera.main` fallback to any camera).
-- Spawn a cube **in front of the camera**, not using an arbitrary scene layer.
-- Set the cube layer to a layer that the camera actually renders (derived from the camera culling mask).
-- Use an **Unlit/Color** (or Standard + emission) material so lighting doesn't hide it.
+- Use `CarSpawner.SpawnCarOnClosestTrack(player.position, ...)` to spawn a `FlatbedShort` on the closest track to the player.
+- Disable the original car renderers.
+- Parent a primitive cube to the spawned car as a temporary stand-in mesh.
+- Set the cube layer to a layer the main camera actually renders (derived from the camera culling mask).
+- Remove the cube collider so it doesn't interfere with the car physics.
 
 Expected log lines:
 
 ```
-[Info   :Brick Loco] Spawned test cube near player at (...)
-[Info   :Brick Loco] Cube renderer enabled: True, isVisible (any camera): True
+[Info   :Brick Loco] CarSpawner found: True
+[Info   :Brick Loco] Spawned TrainCar: ...
+[Info   :Brick Loco] Replaced TrainCar visuals with brick cube
 ```
-
-If you see `isVisible: False`, the object exists but isn’t being rendered (layer/culling-mask issue).
 
 ---
 
@@ -262,22 +326,83 @@ If you see `isVisible: False`, the object exists but isn’t being rendered (lay
 
 As of Feb 2026, the project has moved beyond the initial "spawn a dummy cube" milestone and into spawning and modifying real rolling stock.
 
+This section describes the *current working behavior* implemented in `src/BrickLocoPlugin.cs`.
+
 Current milestones reached:
 
 - Inspect `TrainCarLivery` prefab assets ("CarLiveries") in-game via `Resources.FindObjectsOfTypeAll<TrainCarLivery>()`.
 - Spawn a `FlatbedShort` (Short Flat Car) on the closest track using `CarSpawner.SpawnCarOnClosestTrack(...)`.
 - Replace the carbody visuals by disabling existing renderers and parenting a custom cube as a temporary stand-in mesh.
-- Hold `G` / `H` to apply forward / reverse force to the spawned car; gated by player proximity and capped by a max speed.
-- Adjust tuning values for experimentation (`forceAmount`, `carMass`, `maxSpeed`).
+- Hold `G` / `H` to apply forward / reverse propulsion to the spawned car; gated by player proximity and capped by a max speed.
+- Adjust tuning values for experimentation (`Force`, `Mass`, `MaxSpeed`) via the BepInEx config file.
 - Verify basic interactions still work: coupling and handbrake operation.
+
+Notes on tuning semantics (current code):
+
+- `Force` is treated as a physics force (Newtons) applied every `FixedUpdate`.
+- `Mass` now affects acceleration (roughly $a = F/m$), so increasing mass makes the same `Force` feel weaker.
 
 Known missing piece:
 
 - Wheels / proper bogies are not implemented yet (visual + physics).
 
+## 8.2. Liveries Discovery Output Log
+
+These are `TrainCarLivery` assets discovered at runtime (the `TrainCarLivery` type is defined by the game in `Assembly-CSharp.dll`).
+
+Livery id → prefab name:
+
+- `FlatbedShort` → `CarFlatcarShort`
+- `AutorackBlue` → `CarAutorack_Blue`
+- `AutorackGreen` → `CarAutorack_Green`
+- `AutorackRed` → `CarAutorack_Red`
+- `AutorackYellow` → `CarAutorack_Yellow`
+- `BoxcarBrown` → `CarBoxcar_Brown`
+- `BoxcarGreen` → `CarBoxcar_Green`
+- `BoxcarPink` → `CarBoxcar_Pink`
+- `BoxcarRed` → `CarBoxcar_Red`
+- `BoxcarMilitary` → `CarBoxcarMilitary`
+- `CabooseRed` → `CarCabooseRed`
+- `FlatbedEmpty` → `CarFlatcar`
+- `FlatbedMilitary` → `CarFlatcarMilitary`
+- `FlatbedStakes` → `CarFlatcarStakes`
+- `GondolaGray` → `CarGondola_Grey`
+- `GondolaGreen` → `CarGondola_Green`
+- `GondolaRed` → `CarGondola_Red`
+- `HandCar` → `LocoHandcar`
+- `HopperBrown` → `CarHopper_Brown`
+- `HopperTeal` → `CarHopper_Teal`
+- `HopperYellow` → `CarHopper_Yellow`
+- `HopperCoveredBrown` → `CarHopperCovered`
+- `LocoDE2` → `LocoDE2`
+- `LocoDE6` → `LocoDE6`
+- `LocoDE6Slug` → `LocoDE6Slug`
+- `LocoDH4` → `LocoDH4`
+- `LocoDM3` → `LocoDM3`
+- `LocoS282A` → `LocoS282A`
+- `LocoS282B` → `LocoS282B`
+- `LocoS060` → `LocoS060`
+- `NuclearFlask` → `CarNuclearFlask`
+- `PassengerBlue` → `CarPassengerBlue`
+- `PassengerGreen` → `CarPassengerGreen`
+- `PassengerRed` → `CarPassengerRed`
+- `StockRed` → `CarStock_Red`
+- `StockGreen` → `CarStock_Green`
+- `StockBrown` → `CarStock_Brown`
+- `RefrigeratorWhite` → `CarRefrigerator_White`
+- `TankBlack` → `CarTankBlack`
+- `TankBlue` → `CarTankBlue`
+- `TankOrange` → `CarTankOrange`
+- `TankChrome` → `CarTankChrome`
+- `TankWhite` → `CarTankWhite`
+- `TankYellow` → `CarTankYellow`
+- `TankShortMilk` → `CarTankShort_Milk`
+- `LocoMicroshunter` → `LocoMicroshunter`
+- `LocoDM1U` → `LocoDM1U`
+
 ## 9. Known Constraints
 
-* Unity version locked to **2020.3**
+* Unity version locked to **2019.4**
 * Language version locked to **C# 7.3**
 * Target framework locked to **net472**
 * No modern C# features (nullable refs, global usings, file-scoped namespaces)
@@ -286,8 +411,7 @@ Known missing piece:
 
 ## 10. Next Steps
 
-* Spawn test objects in the world
-* Reference additional DV assemblies (`Assembly-CSharp.dll`)
-* Register a custom vehicle
-* Implement wheel, brake, and coupling logic
-* Replace placeholder meshes with real models
+* Make the placeholder cube a stable body (center of mass, rotation constraints, and attachment)
+* Reconcile propulsion tuning (decide whether mass should affect acceleration)
+* Identify the correct rigidbody/physics components to adjust for realistic roll/derail behavior
+* Replace placeholder cube with real LEGO-style meshes (later: Unity asset workflow)

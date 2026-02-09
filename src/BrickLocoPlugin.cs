@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Configuration;
 using DV.ThingTypes;
 using UnityEngine;
 
@@ -7,9 +8,9 @@ namespace BrickLoco
     [BepInPlugin("com.zobayer.brickloco", "Brick Loco", "0.0.1")]
     public class BrickLocoPlugin : BaseUnityPlugin
     {
-        private float maxSpeed = 20f;
-        private float forceAmount = 7000f;
-        private float carMass = 20000f;
+        private ConfigEntry<float> cfgMaxSpeed;
+        private ConfigEntry<float> cfgForce;
+        private ConfigEntry<float> cfgMass;
 
         private TrainCar spawnedCar;
         
@@ -20,6 +21,9 @@ namespace BrickLoco
 
         private void Awake()
         {
+            cfgMaxSpeed = Config.Bind("BrickLoco", "MaxSpeed", 20f, "Max forward speed (m/s) allowed when applying propulsion.");
+            cfgForce = Config.Bind("BrickLoco", "Force", 7000f, "Propulsion strength applied while holding G/H.");
+            cfgMass = Config.Bind("BrickLoco", "Mass", 20000f, "Mass assigned to the spawned car Rigidbody.");
             Logger.LogInfo("BrickLoco loaded");
         }
 
@@ -56,24 +60,10 @@ namespace BrickLoco
                 Logger.LogWarning("Player found, but no Camera found; spawning may be off-screen.");
             }
 
-            LogAllTrainCarLiveries();
             TestCarSpawnerVisibility();
             SpawnFlatbedShort(player.transform.position);
 
             yield break;
-        }
-
-        private void LogAllTrainCarLiveries()
-        {
-            var liveries = Resources.FindObjectsOfTypeAll<TrainCarLivery>();
-
-            Logger.LogInfo($"Found {liveries.Length} TrainCarLivery assets");
-
-            foreach (var livery in liveries)
-            {
-                string prefabName = livery.prefab != null ? livery.prefab.name : "NULL";
-                Logger.LogInfo($"Livery id={livery.id}, prefab={prefabName}, hidden={livery.isHidden}");
-            }
         }
 
         private void TestCarSpawnerVisibility()
@@ -132,7 +122,7 @@ namespace BrickLoco
             var rb = car.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.mass = carMass;
+                rb.mass = cfgMass.Value;
                 rb.centerOfMass = new Vector3(0f, 0.5f, 0f);
                 rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             }
@@ -184,11 +174,11 @@ namespace BrickLoco
 
             if (IsPlayerNearCar() && Input.GetKey(KeyCode.G))
             {
-                ApplyForwardForce(spawnedCar, forceAmount);
+                ApplyForwardForce(spawnedCar, cfgForce.Value);
             }
             if (IsPlayerNearCar() && Input.GetKey(KeyCode.H))
             {
-                ApplyForwardForce(spawnedCar, -forceAmount);
+                ApplyForwardForce(spawnedCar, -cfgForce.Value);
             }
         }
 
@@ -199,7 +189,13 @@ namespace BrickLoco
                 return;
 
             float forwardSpeed = Vector3.Dot(rb.velocity, car.transform.forward);
-            if (forwardSpeed > maxSpeed) return;
+            float maxSpeed = Mathf.Abs(cfgMaxSpeed.Value);
+
+            if (force > 0f && forwardSpeed >= maxSpeed)
+                return;
+
+            if (force < 0f && forwardSpeed <= -maxSpeed)
+                return;
 
             rb.AddForce(car.transform.forward * force, ForceMode.Force);
         }
