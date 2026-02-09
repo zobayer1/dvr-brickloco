@@ -118,6 +118,22 @@ Build succeeded.
 
 ## 5. Add Required DLL References
 
+### 5.1. Using ILSpy to discover classes/namespaces (workflow)
+
+Derail Valley modding often involves using game types that have little/no public documentation.
+The practical workflow is:
+
+1. Open the game's managed assemblies in an inspector/decompiler (I use **ILSpy**).
+  - Folder: `Derail Valley/DerailValley_Data/Managed/`
+2. Search for the type name you care about (examples: `CarSpawner`, `TrainCar`, `TrainCarLivery`).
+3. Note two things:
+  - The **namespace** (what you `using ...;`)
+  - The **assembly** it lives in (which DLL you must reference in `BrickLoco.csproj`)
+4. Add the DLL as a `<Reference>` in `BrickLoco.csproj` (with a matching `HintPath`).
+
+This is also useful for discovering related types (components, methods, fields) by browsing the class tree around the type you found.
+It’s the fastest way to answer: “Which DLL contains this class?”
+
 Update `BrickLoco.csproj` to reference game assemblies:
 
 NOTE: The `HintPath` values must match your Derail Valley install path.
