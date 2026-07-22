@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Deliberately NOT net472. These tests never touch UnityEngine, so they run on a modern
+      runtime with modern tooling. See docs/testing.md for why.
+    -->
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>false</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>BrickLoco.Tests</AssemblyName>
+    <RootNamespace>BrickLoco.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    The sources under src/Logic are compiled INTO this assembly rather than referenced via
+    ProjectReference. BrickLoco.dll links against UnityEngine/Assembly-CSharp, which cannot be
+    loaded outside the game process; linking the Unity-free sources sidesteps that entirely.
+    Anything added to src/Logic is picked up automatically.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\src\BrickLoco\Logic\*.cs" LinkBase="Logic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+</Project>

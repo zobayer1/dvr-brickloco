@@ -1,0 +1,155 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- net472 and C# 7.3 are fixed by the game's Mono runtime, not preferences. -->
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+
+    <!--
+      Recent UMM builds ship a 0Harmony.dll marked net48, which makes MSBuild drop the
+      UnityModManager reference from a net472 project (MSB3275 -> CS0246). The runtime pairing
+      is fine — Unity's Mono ignores the attribute — so tell resolution to ignore it too.
+    -->
+    <ResolveAssemblyReferenceIgnoreTargetFrameworkAttributeVersionMismatch>true</ResolveAssemblyReferenceIgnoreTargetFrameworkAttributeVersionMismatch>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>false</ImplicitUsings>
+
+    <AssemblyName>BrickLoco</AssemblyName>
+    <RootNamespace>BrickLoco</RootNamespace>
+
+    <!-- Single source of the mod identity: the deployed Info.json is generated from these. -->
+    <Version>0.0.1</Version>
+    <Product>Brick Loco</Product>
+    <Authors>Zobayer Hasan</Authors>
+    <Description>A LEGO-style locomotive mod for Derail Valley.</Description>
+
+    <ModId>BrickLoco</ModId>
+    <ModEntryMethod>BrickLoco.Loader.Load</ModEntryMethod>
+    <!-- Minimum Unity Mod Manager version; matches the manager the mod is developed against. -->
+    <UmmManagerVersion>0.27.3</UmmManagerVersion>
+
+    <!-- The BepInEx-era config file, swept up by Undeploy -p:PurgeConfig=true. -->
+    <LegacyPluginGuid>com.zobayer.brickloco</LegacyPluginGuid>
+  </PropertyGroup>
+
+  <!--
+    Where Derail Valley is installed. Resolution order (first non-empty wins):
+      1. -p:DerailValleyDir="..." on the command line
+      2. the DERAIL_VALLEY_DIR environment variable
+      3. the default below
+    Every reference HintPath and the deploy/undeploy targets derive from this.
+  -->
+  <PropertyGroup>
+    <DerailValleyDir Condition="'$(DerailValleyDir)' == ''">$(DERAIL_VALLEY_DIR)</DerailValleyDir>
+    <DerailValleyDir Condition="'$(DerailValleyDir)' == ''">D:\Games\Steam\steamapps\common\Derail Valley</DerailValleyDir>
+
+    <DerailValleyManagedDir>$(DerailValleyDir)\DerailValley_Data\Managed</DerailValleyManagedDir>
+    <!-- Unity Mod Manager installs itself (and 0Harmony.dll) inside Managed. -->
+    <UnityModManagerDir>$(DerailValleyManagedDir)\UnityModManager</UnityModManagerDir>
+    <DerailValleyModsDir>$(DerailValleyDir)\Mods</DerailValleyModsDir>
+
+    <!-- UMM convention: each mod is a folder under Mods/ holding Info.json + the assembly. -->
+    <ModDeployDir>$(DerailValleyModsDir)\$(ModId)</ModDeployDir>
+
+    <!-- BepInEx-era locations, so Undeploy can sweep up an old install. -->
+    <LegacyBepInExPluginsDir>$(DerailValleyDir)\BepInEx\plugins</LegacyBepInExPluginsDir>
+    <LegacyBepInExConfigDir>$(DerailValleyDir)\BepInEx\config</LegacyBepInExConfigDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="UnityModManager">
+      <HintPath>$(UnityModManagerDir)\UnityModManager.dll</HintPath>
+    </Reference>
+
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(DerailValleyManagedDir)\Assembly-CSharp.dll</HintPath>
+    </Reference>
+
+    <Reference Include="DV.ThingTypes">
+      <HintPath>$(DerailValleyManagedDir)\DV.ThingTypes.dll</HintPath>
+    </Reference>
+
+    <Reference Include="DV.Utils">
+      <HintPath>$(DerailValleyManagedDir)\DV.Utils.dll</HintPath>
+    </Reference>
+
+    <Reference Include="UnityEngine">
+      <HintPath>$(DerailValleyManagedDir)\UnityEngine.dll</HintPath>
+    </Reference>
+
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(DerailValleyManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(DerailValleyManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(DerailValleyManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Shared sanity check: fail early and loudly instead of silently copying nowhere. -->
+  <Target Name="ValidateDerailValleyDir">
+    <Error Condition="'$(DerailValleyDir)' == ''"
+           Text="DerailValleyDir is empty. Set DERAIL_VALLEY_DIR, or pass -p:DerailValleyDir=&quot;...&quot;." />
+    <Error Condition="!Exists('$(DerailValleyDir)')"
+           Text="Derail Valley not found at '$(DerailValleyDir)'. Set DERAIL_VALLEY_DIR, or pass -p:DerailValleyDir=&quot;...&quot;." />
+    <Error Condition="!Exists('$(UnityModManagerDir)\UnityModManager.dll')"
+           Text="Unity Mod Manager not found under '$(DerailValleyManagedDir)'. Run the UnityModManager installer against Derail Valley first." />
+  </Target>
+
+  <!-- dotnet build -t:Deploy  (builds first, then copies + writes Info.json) -->
+  <Target Name="Deploy" DependsOnTargets="ValidateDerailValleyDir;Build">
+    <ItemGroup>
+      <_DeployFiles Include="$(TargetPath)" />
+      <!-- pdb gives stack traces real line numbers -->
+      <_DeployFiles Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    </ItemGroup>
+
+    <!-- UMM reads this manifest to discover and load the mod. Generated so the version has a
+         single source (the <Version> property above). -->
+    <PropertyGroup>
+      <_InfoJson>{
+  "Id": "$(ModId)",
+  "DisplayName": "$(Product)",
+  "Author": "$(Authors)",
+  "Version": "$(Version)",
+  "ManagerVersion": "$(UmmManagerVersion)",
+  "AssemblyName": "$(AssemblyName).dll",
+  "EntryMethod": "$(ModEntryMethod)"
+}</_InfoJson>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(ModDeployDir)" />
+    <Copy SourceFiles="@(_DeployFiles)"
+          DestinationFolder="$(ModDeployDir)"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+    <WriteLinesToFile File="$(ModDeployDir)\Info.json" Lines="$(_InfoJson)" Overwrite="true" />
+    <Message Importance="high" Text="Deployed @(_DeployFiles->'%(Filename)%(Extension)', ', '), Info.json -> $(ModDeployDir)" />
+  </Target>
+
+  <!-- dotnet build -t:Undeploy  (add -p:PurgeConfig=true to also drop the legacy BepInEx .cfg)
+       Note: UMM stores the mod's Settings.xml inside the deploy folder, so undeploy removes it. -->
+  <Target Name="Undeploy" DependsOnTargets="ValidateDerailValleyDir">
+    <ItemGroup>
+      <_DeployedFiles Include="$(ModDeployDir)\**\*" />
+      <!-- BepInEx-era locations, from before the migration to Unity Mod Manager. -->
+      <_DeployedFiles Include="$(LegacyBepInExPluginsDir)\$(AssemblyName)\**\*" />
+      <_DeployedFiles Include="$(LegacyBepInExPluginsDir)\$(AssemblyName).dll"
+                      Condition="Exists('$(LegacyBepInExPluginsDir)\$(AssemblyName).dll')" />
+      <_DeployedFiles Include="$(LegacyBepInExPluginsDir)\$(AssemblyName).pdb"
+                      Condition="Exists('$(LegacyBepInExPluginsDir)\$(AssemblyName).pdb')" />
+      <_DeployedFiles Include="$(LegacyBepInExConfigDir)\$(LegacyPluginGuid).cfg"
+                      Condition="'$(PurgeConfig)' == 'true' and Exists('$(LegacyBepInExConfigDir)\$(LegacyPluginGuid).cfg')" />
+    </ItemGroup>
+
+    <Message Importance="high" Condition="'@(_DeployedFiles)' == ''" Text="Nothing deployed under $(DerailValleyModsDir)." />
+    <Delete Files="@(_DeployedFiles)" />
+    <RemoveDir Directories="$(ModDeployDir)" Condition="Exists('$(ModDeployDir)')" />
+    <RemoveDir Directories="$(LegacyBepInExPluginsDir)\$(AssemblyName)"
+               Condition="Exists('$(LegacyBepInExPluginsDir)\$(AssemblyName)')" />
+    <Message Importance="high" Condition="'@(_DeployedFiles)' != ''" Text="Removed @(_DeployedFiles->'%(Filename)%(Extension)', ', ') from $(DerailValleyDir)" />
+  </Target>
+</Project>
