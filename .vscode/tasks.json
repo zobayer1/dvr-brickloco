@@ -10,30 +10,50 @@
         "-c",
         "Debug"
       ],
-      "group": "build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Run Tests",
+      "detail": "dotnet test — unit tests over src/Logic, no game required",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "test",
+        "tests/BrickLoco.Tests/BrickLoco.Tests.csproj"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
       "problemMatcher": "$msCompile"
     },
     {
       "label": "Deploy Mod (Derail Valley)",
+      "detail": "Build, then copy BrickLoco.dll into BepInEx/plugins/BrickLoco",
       "type": "shell",
       "command": "dotnet",
       "args": [
-        "msbuild",
-        "-t:DeployToDerailValley",
-        "-p:Configuration=Debug",
-        "-p:DeployToDerailValley=true"
+        "build",
+        "src/BrickLoco/BrickLoco.csproj",
+        "-t:Deploy",
+        "-c:Debug"
       ],
       "group": "build",
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "Clean Deployed Mod (Derail Valley)",
+      "label": "Undeploy Mod (Derail Valley)",
+      "detail": "Delete the deployed mod so the game stops loading it",
       "type": "shell",
       "command": "dotnet",
       "args": [
-        "msbuild",
-        "-t:CleanDeployedFromDerailValley",
-        "-p:Configuration=Debug"
+        "build",
+        "src/BrickLoco/BrickLoco.csproj",
+        "-t:Undeploy"
       ],
       "group": "build",
       "problemMatcher": "$msCompile"
