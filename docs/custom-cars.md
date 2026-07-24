@@ -128,13 +128,66 @@ mesh, then a custom bogie) has a known-good state to fall back to.
 
 ---
 
+## 7. Replace the body mesh (custom flat board)
+
+**Validated (July 2026):** a flat board modelled in Blender now rides in-game as the deck, on
+the vanilla bogies, coupled and walkable — one custom mesh, everything else inherited. This
+step isolates the model/material path; keeping vanilla bogies means a problem here is the mesh
+or material, not the bogie hierarchy.
+
+**Where the deck lives.** In the `_template` prefab the visual deck is `Model → Cube`. The
+colliders (`[collision]`, `[walkable]`, `[items]`, `[camera dampening]`) and `BogieF`/`BogieR`
+are **separate** objects, so replacing the deck mesh leaves physics, the walkable surface, and
+the bogies untouched. The deck object's **name is free** — only bogie names are hardcoded.
+
+**Model in Blender.** Blender is Z-up, Unity is Y-up, and Blender's export maps **Blender Y →
+Unity Z** (length, along the rails). So to get a deck the right size, model it as:
+
+| Blender axis | Meaning | Flatbed deck |
+| --- | --- | --- |
+| X | Unity X — width | 2.63 m |
+| Y | Unity Z — length | 16.88 m |
+| Z | Unity Y — thickness | 0.3 m |
+
+Get the target numbers off the real deck first: select the template's deck mesh in Unity, add
+a temporary **Box Collider**, read its **Size** (in metres at scale 1), delete the collider.
+After modelling, `Ctrl+A → Scale` to apply, and export FBX with **Apply Transform** ticked
+(handles the Z-up→Y-up conversion).
+
+> **Export the mesh only.** Blender's default scene includes a **Camera** and a **Light**. If
+> the FBX carries them, Unity imports the Light as a real light that blows the whole scene out
+> bright white in-game. Delete Camera/Light in Blender, or set **Object Types = Mesh** (and/or
+> **Limit to Selected Objects**) on export. As a backstop, Unity's FBX **Model** import has
+> **Import Cameras** / **Import Lights** toggles you can also uncheck.
+
+**Swap it in (Prefab Mode on `_template`):**
+1. Read the old `Model → Cube` **Position** (Y is the deck height).
+2. Drag your board FBX under **`Model`**.
+3. Set the board's Position = the Cube's Position, Rotation `0,0,0`, Scale `1,1,1` (the mesh
+   already has real dimensions baked in — do **not** copy the Cube's scale).
+4. **Delete the `Cube`**, keep the `Model` parent. Save the prefab.
+
+**Give it a material.** A solid colour is enough to validate the material path (textures plug
+into the same slots later):
+1. **Create → Material** (e.g. `_CCL_CARS/BrickFlatbed/Materials/BrickBoard_Mat`).
+2. Shader = **Standard** — CCL remaps Standard to DV's shader at load, so it renders correctly
+   rather than magenta.
+3. Set **Albedo**; optionally Metallic/Smoothness. Drag it onto the board's **Mesh Renderer →
+   Materials → Element 0** inside the prefab, and save.
+
+Then **Export Pack → relaunch → spawn**. The deck comes in your mesh and colour.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | CCL stuck at "needs restart" in UMM | DVLangHelper missing | Install DVLangHelper, relaunch (§2). |
 | `MethodAccessException: Requires team license` in Unity | Stale/absent Personal license | Sign in to Unity Hub, issue a current free Personal license. |
-| Custom material renders **magenta** in-game | Shader did not survive the bundle | Use a CCL/DV-supported shader; see [CCL wiki — Models and Textures](https://github.com/derail-valley-modding/custom-car-loader/wiki/Models-and-Textures). |
+| Custom material renders **magenta** in-game | Shader did not survive the bundle | Use the **Standard** shader (CCL remaps it); see [CCL wiki — Models and Textures](https://github.com/derail-valley-modding/custom-car-loader/wiki/Models-and-Textures). |
+| Whole scene blows out **bright white** near the car | Blender's default Camera/Light exported in the FBX; Unity imported the Light | Export mesh only (delete Camera/Light or Object Types = Mesh); uncheck Import Lights/Cameras (§7). |
+| Custom deck imports rotated or 1000× wrong size | Axis/scale not applied on FBX export | `Ctrl+A → Scale` in Blender, export with **Apply Transform**; remember Blender Y → Unity Z (§7). |
 | Car exported but never appears | Wrong build target (UWP) or exported to the wrong drive's `Mods/` | Rebuild as StandaloneWindows64; export into the correct install's `Mods/`. |
 | Wheel rotation looks wrong on a custom bogie | Wheel radius mismatch | Match the base bogie's radius (default **0.459 m**); see [Roadmap](roadmap.md). |
 
@@ -142,7 +195,9 @@ mesh, then a custom bogie) has a known-good state to fall back to.
 
 ## Next
 
-Replace the stock white body with a custom flat-board mesh (keeping vanilla bogies — this
-isolates the model/shader path), then swap in a custom bogie
-(`BogieF/bogie_car/[axle]*` hierarchy, wheels spun by the game, never hand-animated). Tracked
-in [Roadmap](roadmap.md).
+Stock flatbed (§1–6) and a custom flat-board body (§7) are both validated in-game. Next is a
+**custom bogie**: the `BogieF/BogieR → bogie_car → [axle]*` hierarchy with `Bogie2BrakePads`,
+built to the vanilla bogie's wheelbase and **0.459 m** wheel radius, wheels spun by the game
+(never hand-animated), with the livery's bogie option set to **Custom**. Then a **locomotive**
+(new car type, Kind = Loco) reusing the same bogie and mesh work. Tracked in
+[Roadmap](roadmap.md).

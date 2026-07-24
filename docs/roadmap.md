@@ -143,13 +143,22 @@ indicators. That is why this repo migrated from BepInEx to Unity Mod Manager: ev
 relevant mod (CCL, ZCouplers, Skin Manager) is UMM, and inter-mod dependencies
 (`LoadAfter` in Info.json) only work inside one loader.
 
+The full authoring setup and the export/spawn workflow are written up in
+[Custom Cars (CCL)](custom-cars.md).
+
 Planned sequence:
 
-1. Take one model through the CCL pipeline end to end, before writing more C#. Agreed
-   shape (2026-07): a **flat board on vanilla bogies** first — one custom mesh, everything
-   else (wheels, suspension, rotation) inherited from the game. Then swap in a custom bogie
-   mesh (`BogieF/BogieR → bogie_car → [axle]*` hierarchy; wheels are spun by the game's
-   `WheelRotationViaCode`, never hand-animated; axle origins on the centerline; +Z forward).
+1. Take one model through the CCL pipeline end to end, before writing more C#.
+   - [x] **Stock flatbed** exported and spawned green in-game (validates the whole
+         Unity → bundle → mod → spawn chain). — *done 2026-07*
+   - [x] **Custom flat-board body on vanilla bogies** — one custom Blender mesh with a
+         solid-colour Standard material, swapped into the `_template` prefab's `Model` slot,
+         riding coupled and walkable in-game. Isolated and proved the mesh/material path
+         (no magenta; shader survives the bundle). — *done 2026-07*
+   - [ ] **Custom bogie mesh** — `BogieF/BogieR → bogie_car → [axle]*` hierarchy with
+         `Bogie2BrakePads`, built to the vanilla wheelbase and **0.459 m** wheel radius;
+         wheels spun by the game's `WheelRotationViaCode`, never hand-animated; axle origins
+         on the centreline; +Z forward; livery bogie option set to **Custom**.
 2. Decide where custom logic lives: CCL sim definitions, a companion UMM mod, or
    contributions to CCL itself.
 3. Keep this repo as the logic/tooling learning ground; retire the parts CCL makes
