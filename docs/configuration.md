@@ -10,8 +10,9 @@ and edit the fields directly.
 the UMM window. You do not need to create it; defaults live in code (`Settings.cs`) and the
 file appears on first save.
 
-Settings are plain fields read every time the mod uses them, so edits in the UMM window
-apply **immediately** — no restart. The exceptions are noted below.
+Settings are plain fields read every time the mod uses them, and physics values are
+re-applied to the spawned car the moment you edit them (`Settings.OnChange`), so edits in
+the UMM window apply **immediately** — no restart. The one exception is noted below.
 
 ---
 
@@ -19,9 +20,24 @@ apply **immediately** — no restart. The exceptions are noted below.
 
 | Setting | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `MaxSpeed` | float | `20` | Speed cap in m/s. Above it, further force in that direction is ignored. The sign is ignored. Applies live. |
-| `Force` | float | `7000` | Propulsion force in Newtons, applied every `FixedUpdate` while <kbd>G</kbd>/<kbd>H</kbd> is held. Applies live. |
-| `Mass` | float | `20000` | Mass assigned to the spawned car's Rigidbody, in kg. **Applied once at spawn** — changing it after the car exists does nothing until the next session. |
+| `MaxSpeed` | float | `20` | Speed cap in m/s. Above it, further force in that direction is ignored. The sign is ignored. |
+| `Force` | float | `7000` | Propulsion force in Newtons, applied every `FixedUpdate` while <kbd>G</kbd>/<kbd>H</kbd> is held. |
+| `Mass` | float | `20000` | Mass assigned to the car body's Rigidbody, in kg. **Only applied when `LetGameOwnPhysics` is off.** |
+| `LetGameOwnPhysics` | bool | `true` | Leave the car's mass, centre of mass and rotation constraints to the game's `TrainMassController` and bogie suspension. This is the default because overriding them desynced the bogie joint springs and sank the wheels into the rail. Turn it off only to A/B the legacy placeholder overrides (`Mass`, `ComHeight`, `FreezeCarTilt`). |
+| `DriveViaBogies` | bool | `true` | Push through the game's own `Bogie.ApplyForce` (force follows the rail) instead of shoving the carbody along the car's axis. Turning this off restores the old jittery behaviour — useful for A/B comparison. |
+| `FreezeCarTilt` | bool | `true` | The roll/pitch freeze that stands in for real suspension. **Only applied when `LetGameOwnPhysics` is off.** Off = the body is free to tilt (and, in principle, roll over). |
+| `ComHeight` | float | `0.5` | Centre-of-mass height above the car origin, in metres. Lower fights roll-over harder. **Only applied when `LetGameOwnPhysics` is off.** |
+| `SmoothBogies` | bool | `true` | Interpolate the bogie rigidbodies like the body. Without it the (now visible) wheels stutter relative to the body in first person. |
+| `LateMountRepin` | bool | `true` | Keep the mounted player re-pin in `LateUpdate`. That pass runs *after* DV's camera scripts, so its correction lands a frame late — turn this off to test whether it is the source of mounted-view jitter. |
+
+With `LetGameOwnPhysics` on (the default) the mod does not touch the car's mass, centre of
+mass or rotation constraints at all — the spawned car behaves like any vanilla flatcar,
+which is why the wheels sit correctly on the rail and the car rerails and derails normally.
+The `Mass`, `ComHeight` and `FreezeCarTilt` values below it are the legacy placeholder path,
+kept only for comparison.
+
+These apply **live** — editing a physics value in the UMM window re-tunes the spawned car
+immediately, so tuning is an in-game loop, not a respawn loop.
 
 `Force` and `Mass` interact: acceleration is roughly `a = F/m`, so **raising `Mass` makes
 the same `Force` feel weaker**. If the car feels sluggish, either raise `Force` or lower
@@ -31,18 +47,24 @@ the same `Force` feel weaker**. If the car feels sluggish, either raise `Force` 
 contributing while <kbd>H</kbd> still works, so you can always brake. Setting `MaxSpeed = 0`
 pins the car: neither key drives it once it is moving at all.
 
+Note that `Mass` writes the body Rigidbody directly, bypassing the game's
+`TrainMassController` (which normally distributes mass between body and bogies). That bypass
+is exactly what sank the wheels, which is why `LetGameOwnPhysics` defaults to on and leaves
+mass to the game.
+
 ---
 
 ## Debug logging
 
 | Setting | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `MountTelemetry` | bool | `true` | Master switch for diagnostic logging: mount telemetry, key-down traces, jitter snapshots, and the <kbd>F9</kbd> dump. |
+| `MountTelemetry` | bool | `false` | Master switch for diagnostic logging: mount telemetry, key-down traces, jitter snapshots, and the <kbd>F9</kbd> dump. |
 | `DumpOnMount` | bool | `false` | Also dump the full player component tree on every mount and dismount. Requires `MountTelemetry`. |
 
-`MountTelemetry` is on by default because the mod is still in discovery. It is noisy —
-every mounted <kbd>Ctrl</kbd>/<kbd>X</kbd>/<kbd>Space</kbd> press triggers a 30-frame
-snapshot coroutine that logs 15 lines. Turn it off for normal play.
+`MountTelemetry` is **off by default**. When on it re-logs the mounted-player enforcement
+every frame (including a CharacterController re-disable line that is not rate-limited), which
+is continuous disk I/O while mounted and contributes to frame hitches at speed. Turn it on
+only while actively debugging the mount, not for normal play.
 
 `DumpOnMount` is nested under `MountTelemetry`: setting it `true` alone does nothing.
 

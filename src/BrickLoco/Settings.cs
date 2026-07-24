@@ -18,11 +18,29 @@ namespace BrickLoco
         [Draw("Propulsion force (N, applied while holding G/H)")]
         public float Force = 7000f;
 
-        [Draw("Car mass (kg, applied at spawn)")]
+        [Draw("Car mass (kg)")]
         public float Mass = 20000f;
 
+        [Draw("Let the game own car physics (mass/COM/tilt) — recommended")]
+        public bool LetGameOwnPhysics = true;
+
+        [Draw("Drive through bogies (vanilla traction path)")]
+        public bool DriveViaBogies = true;
+
+        [Draw("Freeze car tilt (roll/pitch placeholder)")]
+        public bool FreezeCarTilt = true;
+
+        [Draw("Centre of mass height (m above car origin)")]
+        public float ComHeight = 0.5f;
+
+        [Draw("Interpolate bogie rigidbodies (smoother wheels)")]
+        public bool SmoothBogies = true;
+
+        [Draw("Re-pin mount in LateUpdate (off = camera jitter A/B test)")]
+        public bool LateMountRepin = true;
+
         [Draw("Debug: mount telemetry logging")]
-        public bool MountTelemetry = true;
+        public bool MountTelemetry = false;
 
         [Draw("Debug: dump player components on mount/dismount")]
         public bool DumpOnMount = false;
@@ -58,8 +76,10 @@ namespace BrickLoco
             Save(this, modEntry);
         }
 
+        /// <summary>UMM calls this after any [Draw] field is edited in its window.</summary>
         public void OnChange()
         {
+            Loader.RaiseSettingsChanged();
         }
     }
 }

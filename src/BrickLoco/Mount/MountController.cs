@@ -218,8 +218,10 @@ namespace BrickLoco.Mount
         }
 
         /// <summary>
-        /// Runs after everything else in the frame. Both passes are needed — with only one, the
-        /// player visibly drifts for part of each frame.
+        /// Runs after everything else in the frame — including after DV's camera scripts, which
+        /// is the double-edge: it corrects anything that moved the player during their updates,
+        /// but a correction here lands *after* the camera computed its pose, one frame late.
+        /// LateMountRepin exists to A/B whether this pass causes the mounted-view jitter.
         /// </summary>
         public void EnforceLate()
         {
@@ -229,13 +231,16 @@ namespace BrickLoco.Mount
             if (Seat == null || rig.ControllerRoot == null)
                 return;
 
-            if (rig.ControllerRoot.parent != Seat)
+            if (config.LateMountRepin)
             {
-                // If something auto-unparents the controller during input, reattach it.
-                rig.ControllerRoot.SetParent(Seat, worldPositionStays: false);
-            }
+                if (rig.ControllerRoot.parent != Seat)
+                {
+                    // If something auto-unparents the controller during input, reattach it.
+                    rig.ControllerRoot.SetParent(Seat, worldPositionStays: false);
+                }
 
-            rig.ControllerRoot.localPosition = mountedLocalPosition;
+                rig.ControllerRoot.localPosition = mountedLocalPosition;
+            }
 
             EnforceCharacterController();
             ApplySuppressionWindow();

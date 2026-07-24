@@ -90,9 +90,24 @@ Every id discovered at runtime is listed in [Liveries](liveries.md).
 
 ### `TrainCar`
 
-The spawned component. BrickLoco uses `car.transform`, `car.name` and
-`car.GetComponent<Rigidbody>()`; see [Architecture](architecture.md#spawn-pipeline) for the
-Rigidbody values it sets.
+The spawned component. BrickLoco uses `car.transform`, `car.name`,
+`car.GetComponent<Rigidbody>()`, `car.Bogies` and `car.AreBogiesFullyInitialized()`; see
+[Architecture](architecture.md#spawn-pipeline) for the Rigidbody values it sets. Also
+notable: `car.massController` (a `TrainMassController`) owns mass distribution between body
+and bogies — BrickLoco currently bypasses it.
+
+### `Bogie`
+
+One per truck, with its own public `Rigidbody rb`. The method that matters:
+
+```csharp
+public void ApplyForce(float inputForce)   // rb.AddForce(transform.forward * inputForce)
+```
+
+This is the game's own traction path: force applied at the bogie, along the bogie's
+forward — which follows the rail. BrickLoco drives through it (`DriveViaBogies`), because
+pushing the carbody along the *car's* forward diverges from the rail on curves and fights
+the bogie joints. Found by decompiling `Assembly-CSharp.dll` with `ilspycmd -t Bogie`.
 
 ---
 

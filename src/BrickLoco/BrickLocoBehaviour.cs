@@ -32,6 +32,16 @@ namespace BrickLoco
             rig = new PlayerRig();
             diagnostics = new MountDiagnostics(this, rig, log);
             mount = new MountController(config, rig, diagnostics, log);
+
+            // Physics tunables (mass, COM height, tilt freeze) re-apply the moment the user
+            // edits them in the UMM window — no respawn needed.
+            Loader.SettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged()
+        {
+            if (car != null && !car.IsGone)
+                car.ApplyPhysicsSettings(config);
         }
 
         private void Start()
@@ -59,8 +69,24 @@ namespace BrickLoco
 
             BrickCarBuilder.LogSpawnerVisibility(log);
 
-            car = BrickCarBuilder.Spawn(rig.Root.position, config.Mass, log, config.Verbose);
+            car = BrickCarBuilder.Spawn(rig.Root.position, config, log);
             mount.SetCar(car);
+
+            if (car != null)
+                StartCoroutine(RetuneWhenBogiesReady());
+        }
+
+        /// <summary>
+        /// Bogie rigidbodies are created a few frames after the car spawns, so the physics
+        /// settings applied at spawn miss them. Re-apply once the game reports them ready.
+        /// </summary>
+        private IEnumerator RetuneWhenBogiesReady()
+        {
+            while (car != null && !car.IsGone && !car.Car.AreBogiesFullyInitialized())
+                yield return null;
+
+            if (car != null && !car.IsGone)
+                car.ApplyPhysicsSettings(config);
         }
 
         private void Update()
@@ -100,14 +126,16 @@ namespace BrickLoco
                 return;
 
             if (Input.GetKey(KeyCode.G))
-                car.ApplyForwardForce(config.Force, config.MaxSpeed);
+                car.ApplyForwardForce(config.Force, config.MaxSpeed, config.DriveViaBogies);
 
             if (Input.GetKey(KeyCode.H))
-                car.ApplyForwardForce(-config.Force, config.MaxSpeed);
+                car.ApplyForwardForce(-config.Force, config.MaxSpeed, config.DriveViaBogies);
         }
 
         private void OnDestroy()
         {
+            Loader.SettingsChanged -= OnSettingsChanged;
+
             // The mod was toggled off in UMM (or the game is quitting): put the player and
             // every disabled DV script back before the host disappears.
             if (mount != null && mount.IsMounted)

@@ -22,25 +22,39 @@ Where the project is and what comes next.
 - [x] Extract pure decision logic and unit test it ([Testing](testing.md))
 - [x] Split the plugin into single-responsibility classes ([Architecture](architecture.md))
 
+- [x] Drive through the game's traction path (`Bogie.ApplyForce`) instead of shoving the
+      carbody — the suspected root cause of the on-track jitter
+- [x] Keep the car's real bogies/wheels visible instead of hiding every renderer
+- [x] Physics tunables (`Mass`, `ComHeight`, `FreezeCarTilt`, `DriveViaBogies`) apply live
+      from the UMM window
+- [x] **Let the game own car physics** (`LetGameOwnPhysics`, default on). Overriding
+      `rb.mass` bypassed `TrainMassController`, which desynced the bogie suspension joints and
+      sank the wheels into the rail (only became visible once the wheels were shown). Handing
+      mass/COM/constraints back to the game makes the car sit, drive, rerail and derail like a
+      vanilla flatcar. The `Mass`/`ComHeight`/`FreezeCarTilt` overrides are now legacy A/B only.
+
 ## In progress
 
-- [ ] **Make the cube a stable body.** Roll and pitch are currently frozen outright
-      (`FreezeRotationX | FreezeRotationZ`), which is a placeholder, not physics.
-- [ ] **Fix the mounted jitter loop.** <kbd>Ctrl</kbd>/<kbd>X</kbd>/<kbd>Space</kbd> still
-      trigger sink-and-reset while mounted. What ships today is a
-      [time-boxed mitigation](mounting.md#the-problem-key-suppression-window) built from six
-      suspected scripts, not a root-cause fix.
+- [ ] **Fix the mounted jitter loop.** Confirmed 2026-07-23 to be the mount enforcement
+      fight, not car physics: the car is smooth in every detached view (F2/F3, bystander),
+      a rerailed tilted car keeps juddering *only while mounted*, and unmounting stops it
+      immediately. The per-frame re-pin + CharacterController re-disable loop is the cause.
+      Deliberately **not** being chased before the CCL pivot — a real CCL cab boards the
+      player through the game's own system and removes the pinning fight entirely. What ships
+      today is a [time-boxed mitigation](mounting.md#the-problem-key-suppression-window).
 
 ---
 
 ## Next
 
 ### Physics
-- Identify the right components to adjust for realistic roll and derail behaviour, and
-  retire the rotation freeze.
-- Add wheels and proper bogies — visual and physical. Currently missing entirely.
-- Settle the `Force`/`Mass` relationship. Since `a = F/m`, raising `Mass` weakens the same
-  `Force`; decide whether that coupling is what the mod wants before tuning defaults.
+- Retire the legacy override path (`Mass`, `ComHeight`, `FreezeCarTilt`) once
+  `LetGameOwnPhysics` has proven itself over more play — it is A/B scaffolding now.
+
+### Spawning
+- Respawn on save reload. Spawn runs once per mod-host lifetime, so reloading a save
+  destroys the car without spawning a new one; the workaround is toggling the mod off/on in
+  UMM. A CCL-registered car spawns through the game's own system and sidesteps this.
 
 ### Mounting
 - Find the actual cause of the jitter loop using `[JitterSnap]` telemetry, then delete most
@@ -51,10 +65,6 @@ Where the project is and what comes next.
 ### Visuals
 - Replace the placeholder cube with LEGO-style meshes via a Unity asset workflow.
   See [Replacing the placeholder model](#replacing-the-placeholder-model) below.
-- **Stop hiding the bogies.** `ReplaceVisualsWithCube` disables *every* `Renderer` under the
-  car, which includes the flatbed's own bogies and wheels. The car already has working,
-  rotating wheels — the mod is currently covering them up. Filtering the disable to carbody
-  renderers only would tick the "no wheels" item without modelling anything.
 
 ### Controls
 - Make keybindings configurable rather than hardcoded.
@@ -135,7 +145,11 @@ relevant mod (CCL, ZCouplers, Skin Manager) is UMM, and inter-mod dependencies
 
 Planned sequence:
 
-1. Take one existing model through the CCL pipeline end to end, before writing more C#.
+1. Take one model through the CCL pipeline end to end, before writing more C#. Agreed
+   shape (2026-07): a **flat board on vanilla bogies** first — one custom mesh, everything
+   else (wheels, suspension, rotation) inherited from the game. Then swap in a custom bogie
+   mesh (`BogieF/BogieR → bogie_car → [axle]*` hierarchy; wheels are spun by the game's
+   `WheelRotationViaCode`, never hand-animated; axle origins on the centerline; +Z forward).
 2. Decide where custom logic lives: CCL sim definitions, a companion UMM mod, or
    contributions to CCL itself.
 3. Keep this repo as the logic/tooling learning ground; retire the parts CCL makes

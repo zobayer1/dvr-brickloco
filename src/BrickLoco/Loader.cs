@@ -17,7 +17,17 @@ namespace BrickLoco
         internal static Settings Settings { get; private set; }
         internal static ModLog Log { get; private set; }
 
+        /// <summary>Raised when the user edits a setting in the UMM window (Settings.OnChange).</summary>
+        internal static event System.Action SettingsChanged;
+
         private static GameObject host;
+
+        internal static void RaiseSettingsChanged()
+        {
+            System.Action handler = SettingsChanged;
+            if (handler != null)
+                handler();
+        }
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {

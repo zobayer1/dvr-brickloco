@@ -118,22 +118,21 @@ spawner.SpawnCarOnClosestTrack(position, livery,
 `SpawnCarOnClosestTrack` — not a raw `Instantiate` — is what gets the car correctly bogied
 and railed. Spawning off-track is not something the mod tries to do.
 
-**3. Retune the Rigidbody.**
+**3. Retune the Rigidbody** — `BrickCar.ApplyPhysicsSettings`, run at spawn and re-run live
+on every settings edit:
 
 | Property | Value | Why |
 | --- | --- | --- |
-| `mass` | `Mass` config | Sets acceleration response together with `Force`. |
-| `centerOfMass` | `(0, 0.5, 0)` | Lowers the COM to fight roll-over. |
-| `constraints` | `FreezeRotationX \| FreezeRotationZ` | Hard-stops pitch and roll — the current stand-in for real bogie physics. |
+| `mass` | `Mass` setting | Sets acceleration response together with `Force`. Bypasses the game's `TrainMassController`. |
+| `centerOfMass` | `(0, ComHeight, 0)` | Lower fights roll-over harder. |
+| `constraints` | `FreezeRotationX \| FreezeRotationZ` when `FreezeCarTilt` | Stand-in for real suspension; also why the car cannot derail while on. |
 | `interpolation` | `Interpolate` | Smooths visible motion between physics steps. |
 
-The rotation freeze is a placeholder. It is also why the car cannot currently derail — see
-[Roadmap](roadmap.md).
-
 **4. Restyle and furnish.**
-Every `Renderer` under the car is disabled and a red cube primitive is parented at local
-`(0, 1.2, 0)`, scaled `(2, 1, 1)`. An empty `BrickLoco_Seat` transform is added at
-`BrickCar.SeatLocalPosition` — local `(0, 2.5, 0)`.
+Carbody `Renderer`s are disabled, but anything under the car's `Bogies` is **kept** — the
+game's own rotating wheels stay visible instead of being hidden with the body. A red cube
+primitive is parented at local `(0, 1.2, 0)`, scaled `(2, 1, 1)`, and an empty
+`BrickLoco_Seat` transform is added at `BrickCar.SeatLocalPosition` — local `(0, 2.5, 0)`.
 
 Two details worth knowing:
 
@@ -153,7 +152,10 @@ Three Unity callbacks in `BrickLocoBehaviour`, each delegating to `MountControll
 
 Guards on a live car and `mount.IsMounted`, then calls `BrickCar.ApplyForwardForce` for
 <kbd>G</kbd>/<kbd>H</kbd>. That projects current velocity onto the car's forward axis, asks
-`PropulsionPolicy.ShouldApplyForce`, and calls `rb.AddForce(...)` if allowed.
+`PropulsionPolicy.ShouldApplyForce`, then (with `DriveViaBogies` on) splits the force across
+the car's bogies via the game's own `Bogie.ApplyForce` — each bogie pushes along *its* rail
+direction, which is what keeps curves from turning into a fight between the body and the
+bogie joints. With the setting off it falls back to `rb.AddForce` on the carbody.
 
 ### `Update()` — input and early enforcement
 

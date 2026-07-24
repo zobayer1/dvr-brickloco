@@ -23,8 +23,9 @@ namespace BrickLoco.Game
         /// Spawns the brick car on the track closest to <paramref name="position"/>.
         /// Returns null (having logged the reason) if any step fails.
         /// </summary>
-        public static BrickCar Spawn(Vector3 position, float mass, ModLog log, bool verbose)
+        public static BrickCar Spawn(Vector3 position, Settings settings, ModLog log)
         {
+            bool verbose = settings.Verbose;
             var spawner = Object.FindObjectOfType<CarSpawner>();
             if (spawner == null)
             {
@@ -59,11 +60,12 @@ namespace BrickLoco.Game
             if (verbose)
                 log.LogInfo($"Spawned TrainCar position: {car.transform.position}");
 
-            TuneRigidbody(car, mass);
             ReplaceVisualsWithCube(car, log);
             Transform seat = CreateSeat(car, log, verbose);
 
-            return new BrickCar(car, seat);
+            var brickCar = new BrickCar(car, seat);
+            brickCar.ApplyPhysicsSettings(settings);
+            return brickCar;
         }
 
         private static TrainCarLivery FindLiveryById(string id)
@@ -81,26 +83,20 @@ namespace BrickLoco.Game
             return null;
         }
 
-        private static void TuneRigidbody(TrainCar car, float mass)
-        {
-            var rb = car.GetComponent<Rigidbody>();
-            if (rb == null)
-                return;
-
-            rb.mass = mass;
-            rb.centerOfMass = new Vector3(0f, 0.5f, 0f);
-
-            // Placeholder for real bogie physics: hard-freezing pitch and roll is also why
-            // the car currently cannot derail.
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-        }
-
         private static void ReplaceVisualsWithCube(TrainCar car, ModLog log)
         {
+            // Hide the carbody, but keep everything under the bogies: the car already has
+            // real, rotating wheels — disabling every renderer was covering them up.
             var renderers = car.GetComponentsInChildren<Renderer>(true);
+            int kept = 0;
             foreach (var r in renderers)
             {
+                if (IsUnderBogie(r.transform, car))
+                {
+                    kept++;
+                    continue;
+                }
+
                 r.enabled = false;
             }
 
@@ -124,7 +120,29 @@ namespace BrickLoco.Game
             // The cube is decoration; its collider would fight the car's real ones.
             Object.Destroy(cube.GetComponent<Collider>());
 
-            log.LogInfo("Replaced TrainCar visuals with brick cube");
+            log.LogInfo($"Replaced TrainCar visuals with brick cube (kept {kept} bogie/wheel renderer(s))");
+        }
+
+        /// <summary>
+        /// True when a transform belongs to one of the car's bogies. Hierarchy-based — no name
+        /// guessing — so it keeps exactly what the game itself considers running gear.
+        /// </summary>
+        private static bool IsUnderBogie(Transform t, TrainCar car)
+        {
+            Bogie[] bogies = car.Bogies;
+            if (bogies == null)
+                return false;
+
+            for (int i = 0; i < bogies.Length; i++)
+            {
+                Bogie bogie = bogies[i];
+                if (bogie == null)
+                    continue;
+                if (t == bogie.transform || t.IsChildOf(bogie.transform))
+                    return true;
+            }
+
+            return false;
         }
 
         private static Transform CreateSeat(TrainCar car, ModLog log, bool verbose)
