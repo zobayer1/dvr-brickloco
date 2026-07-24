@@ -9,6 +9,7 @@ start wherever your question lives.
 | --- | --- |
 | [Getting Started](getting-started.md) | Prerequisites, Unity, Unity Mod Manager, first build. Do this once. |
 | [Build & Deploy](build-and-deploy.md) | The build/deploy/undeploy workflow in full detail. |
+| [Custom Cars (CCL)](custom-cars.md) | The Unity + Custom Car Loader authoring pipeline: artifacts, versions, project settings, export. |
 | [Troubleshooting](troubleshooting.md) | The mod did not load, the car did not spawn, deploy failed. |
 
 ## Using the mod
